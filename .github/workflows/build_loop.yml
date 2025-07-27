@@ -291,24 +291,7 @@ jobs:
             fi
           done
           
-          # 2. Patch LoopDataManager.swift  
-          find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
-            if grep -q "func addGlucoseSamples" "$file"; then
-              sed -i '' '/case \.success(let samples):/,/completion?(\.success(samples))/{
-                /completion?(\.success(samples))/a\
-                            if let badgeValue = self.glucoseStore.latestGlucose?.quantity.doubleValue(for: .milligramsPerDeciliter, withRounding: true) {\
-                                NotificationManager.addAppBadge(badge: Int(badgeValue))\
-                            }
-              }' "$file"
-              
-              sed -i '' '/case \.failure(let error):/,/completion?(\.failure(error))/{
-                /completion?(\.failure(error))/a\
-                            NotificationManager.addAppBadge(badge: Int(0))
-              }' "$file"
-              
-              echo "Added badge updates to LoopDataManager"
-            fi
-          done
+
           
           # 3. Patch CGMStalenessMonitor.swift
           find . -name "CGMStalenessMonitor.swift" -path "*/Loop/*" | while read file; do
