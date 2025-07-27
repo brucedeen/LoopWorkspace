@@ -305,6 +305,7 @@ jobs:
 
             mv "$tmpfile" "$file"
             echo "✅ Patched: $file"
+            cat "$file"
           done
           # 2. Patch LoopDataManager.swift  
           find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
