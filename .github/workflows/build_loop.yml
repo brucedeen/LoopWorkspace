@@ -290,23 +290,7 @@ jobs:
               echo "Added addAppBadge function to NotificationManager"
             fi
           done
-          
 
-          
-          # 3. Patch CGMStalenessMonitor.swift
-          find . -name "CGMStalenessMonitor.swift" -path "*/Loop/*" | while read file; do
-            if grep -q "@Published var cgmDataIsStale: Bool" "$file"; then
-              sed -i '' '/@Published var cgmDataIsStale: Bool = true {/,/}$/{
-                /didSet {/a\
-                    if cgmDataIsStale {\
-                        NotificationManager.addAppBadge(badge: Int(0))\
-                    }
-              }' "$file"
-              echo "Added badge clearing to CGMStalenessMonitor"
-            fi
-          done
-          
-          echo "Real-time glucose badge patch applied successfully"
           
 
 
