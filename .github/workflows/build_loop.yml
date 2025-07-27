@@ -284,27 +284,32 @@ jobs:
             fi
           
             tmpfile=$(mktemp)
-          
             awk '
-              BEGIN { in_extension = 0 }
-              /^extension NotificationManager[[:space:]]*\{/ { in_extension = 1 }
-              in_extension && /private static func remoteCarbEntryNotificationBody\(amountInGrams: Double\)/ { in_target = 1 }
-              in_target && /^\s*\}\s*$/ {
-                print
-                print ""
-                print "    static func addAppBadge(badge: Int) {"
-                print "        DispatchQueue.main.async {"
-                print "            UIApplication.shared.applicationIconBadgeNumber = badge"
-                print "        }"
-                print "    }"
-                in_target = 0
-                next
+              BEGIN { inside_ext = 0; brace_depth = 0 }
+              /^extension NotificationManager[[:space:]]*\{/ {
+                inside_ext = 1
+                brace_depth = 1
+              }
+              inside_ext {
+                # Count opening/closing braces to track nesting
+                brace_depth += gsub(/\{/, "{")
+                brace_depth -= gsub(/\}/, "}")
+          
+                if (brace_depth == 0) {
+                  # Insert right before the closing brace
+                  print ""
+                  print "    static func addAppBadge(badge: Int) {"
+                  print "        DispatchQueue.main.async {"
+                  print "            UIApplication.shared.applicationIconBadgeNumber = badge"
+                  print "        }"
+                  print "    }"
+                  inside_ext = 0
+                }
               }
               { print }
             ' "$file" > "$tmpfile" && mv "$tmpfile" "$file"
           
             echo "✅ Patched: $file"
-            cat "$file"
           done
           # 2. Patch LoopDataManager.swift  
           find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
