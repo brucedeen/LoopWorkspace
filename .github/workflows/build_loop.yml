@@ -280,13 +280,14 @@ jobs:
           # 1. Patch NotificationManager.swift
           find . -name "NotificationManager.swift" -path "*/Loop/*" | while read file; do
             if grep -q "enum NotificationManager" "$file"; then
-              sed -i '' '/^}$/i\
+              sed -i '' '/remoteCarbEntryNotificationBody(amountInGrams: Double)/a\
             \
-            static func addAppBadge(badge: Int) {\
-                DispatchQueue.main.async {\
-                    UIApplication.shared.applicationIconBadgeNumber = badge\
+                static func addAppBadge(badge: Int) {\
+                    DispatchQueue.main.async {\
+                        UIApplication.shared.applicationIconBadgeNumber = badge\
+                    }\
                 }\
-            }' "$file"
+            ' "$file"
               echo "Added addAppBadge function to NotificationManager"
               cat "$file"
             fi
