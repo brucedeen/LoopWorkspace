@@ -282,16 +282,16 @@ jobs:
               echo "🟡 Already patched: $file"
               continue
             fi
-
+          
             tmpfile=$(mktemp)
-
+          
             awk '
-              BEGIN { in_target = 0 }
-              /private static func remoteCarbEntryNotificationBody\(amountInGrams: Double\)/ {
-                in_target = 1
-              }
-              in_target && /^\s*}\s*$/ {
+              BEGIN { in_extension = 0 }
+              /^extension NotificationManager[[:space:]]*\{/ { in_extension = 1 }
+              in_extension && /private static func remoteCarbEntryNotificationBody\(amountInGrams: Double\)/ { in_target = 1 }
+              in_target && /^\s*\}\s*$/ {
                 print
+                print ""
                 print "    static func addAppBadge(badge: Int) {"
                 print "        DispatchQueue.main.async {"
                 print "            UIApplication.shared.applicationIconBadgeNumber = badge"
@@ -301,9 +301,8 @@ jobs:
                 next
               }
               { print }
-            ' "$file" > "$tmpfile"
-
-            mv "$tmpfile" "$file"
+            ' "$file" > "$tmpfile" && mv "$tmpfile" "$file"
+          
             echo "✅ Patched: $file"
             cat "$file"
           done
