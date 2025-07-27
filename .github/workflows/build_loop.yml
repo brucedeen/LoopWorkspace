@@ -272,7 +272,61 @@ jobs:
           profiles \
           basal_lock \
           live_activity \
-          negative_insulin
+          negative_insulin 
+          
+          # Real-time glucose badge patch - complete implementation
+          if echo "$customizations" | grep -q "glucose_badge"; then
+            echo "Applying real-time glucose badge patch to all files..."
+            
+            # 1. Patch NotificationManager.swift
+            find . -name "NotificationManager.swift" -path "*/Loop/*" | while read file; do
+              if grep -q "enum NotificationManager" "$file"; then
+                sed -i '' '/^}$/i\
+              \
+              static func addAppBadge(badge: Int) {\
+                  DispatchQueue.main.async {\
+                      UIApplication.shared.applicationIconBadgeNumber = badge\
+                  }\
+              }' "$file"
+                echo "Added addAppBadge function to NotificationManager"
+              fi
+            done
+            
+            # 2. Patch LoopDataManager.swift  
+            find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
+              if grep -q "func addGlucoseSamples" "$file"; then
+                sed -i '' '/case \.success(let samples):/,/completion?(\.success(samples))/{
+                  /completion?(\.success(samples))/a\
+                              if let badgeValue = self.glucoseStore.latestGlucose?.quantity.doubleValue(for: .milligramsPerDeciliter, withRounding: true) {\
+                                  NotificationManager.addAppBadge(badge: Int(badgeValue))\
+                              }
+                }' "$file"
+                
+                sed -i '' '/case \.failure(let error):/,/completion?(\.failure(error))/{
+                  /completion?(\.failure(error))/a\
+                              NotificationManager.addAppBadge(badge: Int(0))
+                }' "$file"
+                
+                echo "Added badge updates to LoopDataManager"
+              fi
+            done
+            
+            # 3. Patch CGMStalenessMonitor.swift
+            find . -name "CGMStalenessMonitor.swift" -path "*/Loop/*" | while read file; do
+              if grep -q "@Published var cgmDataIsStale: Bool" "$file"; then
+                sed -i '' '/@Published var cgmDataIsStale: Bool = true {/,/}$/{
+                  /didSet {/a\
+                      if cgmDataIsStale {\
+                          NotificationManager.addAppBadge(badge: Int(0))\
+                      }
+                }' "$file"
+                echo "Added badge clearing to CGMStalenessMonitor"
+              fi
+            done
+            
+            echo "Real-time glucose badge patch applied successfully"
+          fi
+
 
       # Patch Fastlane Match to not print tables
       - name: Patch Match Tables
