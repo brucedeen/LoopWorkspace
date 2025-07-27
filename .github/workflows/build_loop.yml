@@ -277,20 +277,34 @@ jobs:
           # Real-time glucose badge patch - complete implementation
           echo "Applying real-time glucose badge patch to all files..."
           
-          # 1. Patch NotificationManager.swift
-          find . -name "NotificationManager.swift" -path "*/Loop/*" | while read file; do
-            if grep -q "enum NotificationManager" "$file"; then
-             sed -i '' '/private static func remoteCarbEntryNotificationBody(amountInGrams: Double) -> String {/,/^ *}$/{
-              /^ *}$/a\
-              \
-                  static func addAppBadge(badge: Int) {\
-                      DispatchQueue.main.async {\
-                          UIApplication.shared.applicationIconBadgeNumber = badge\
-                      }\
-                  }\
-              }' "$file"
-
+          find . -name "NotificationManager.swift" -path "*/Loop/*" | while read -r file; do
+            if grep -q 'static func addAppBadge' "$file"; then
+              echo "🟡 Already patched: $file"
+              continue
             fi
+
+            tmpfile=$(mktemp)
+
+            awk '
+              BEGIN { in_target = 0 }
+              /private static func remoteCarbEntryNotificationBody\(amountInGrams: Double\)/ {
+                in_target = 1
+              }
+              in_target && /^\s*}\s*$/ {
+                print
+                print "    static func addAppBadge(badge: Int) {"
+                print "        DispatchQueue.main.async {"
+                print "            UIApplication.shared.applicationIconBadgeNumber = badge"
+                print "        }"
+                print "    }"
+                in_target = 0
+                next
+              }
+              { print }
+            ' "$file" > "$tmpfile"
+
+            mv "$tmpfile" "$file"
+            echo "✅ Patched: $file"
           done
           # 2. Patch LoopDataManager.swift  
           find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
