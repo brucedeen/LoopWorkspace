@@ -310,6 +310,8 @@ jobs:
             ' "$file" > "$tmpfile" && mv "$tmpfile" "$file"
           
             echo "✅ Patched: $file"
+            cat "$file"
+            echo "DONE"
           done
           # 2. Patch LoopDataManager.swift  
           find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
@@ -328,6 +330,7 @@ jobs:
               
               echo "Added badge updates to LoopDataManager"
               cat "$file"
+              echo "DONE"
             fi
           done
           # 3. Patch CGMStalenessMonitor.swift
@@ -341,6 +344,7 @@ jobs:
               }' "$file"
               echo "Added badge clearing to CGMStalenessMonitor"
               cat "$file"
+               echo "DONE"
             fi
           done
           
