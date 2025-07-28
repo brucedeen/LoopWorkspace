@@ -283,36 +283,49 @@ jobs:
               continue
             fi
           
-            tmpfile=$(mktemp)
-            awk '
-              BEGIN { inside_ext = 0; brace_depth = 0 }
-              /^extension NotificationManager[[:space:]]*\{/ {
-                inside_ext = 1
-                brace_depth = 1
-              }
-              inside_ext {
-                # Count opening/closing braces to track nesting
-                brace_depth += gsub(/\{/, "{")
-                brace_depth -= gsub(/\}/, "}")
+            echo "<b>BEFORE: $file</b>"
+            cat "$file"
+            echo "<a>"
           
-                if (brace_depth == 0) {
-                  # Insert right before the closing brace
+            tmpfile=$(mktemp)
+          
+            awk '
+              BEGIN { in_ext = 0; brace_depth = 0 }
+              /^extension NotificationManager[[:space:]]*\{/ {
+                in_ext = 1
+                brace_depth = 1
+                print
+                next
+              }
+          
+              in_ext {
+                open_braces = gsub(/\{/, "{")
+                close_braces = gsub(/\}/, "}")
+                brace_depth += open_braces - close_braces
+          
+                if (brace_depth == 0 && close_braces > 0) {
+                  # Before printing the final closing }, insert the function
                   print ""
                   print "    static func addAppBadge(badge: Int) {"
                   print "        DispatchQueue.main.async {"
                   print "            UIApplication.shared.applicationIconBadgeNumber = badge"
                   print "        }"
                   print "    }"
-                  inside_ext = 0
+                  print "}"
+                  in_ext = 0
+                  next
                 }
               }
+          
               { print }
             ' "$file" > "$tmpfile" && mv "$tmpfile" "$file"
           
-            echo "✅ Patched: $file"
+            echo "<b>AFTER: $file</b>"
             cat "$file"
+            echo "<a>"
             echo "DONE"
           done
+
           # 2. Patch LoopDataManager.swift  
           find . -name "LoopDataManager.swift" -path "*/Loop/*" | while read file; do
             if grep -q "func addGlucoseSamples" "$file"; then
